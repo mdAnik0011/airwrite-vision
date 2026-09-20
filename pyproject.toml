@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "airwrite-vision"
+version = "0.1.0"
+description = "Gesture-controlled air writing and character recognition"
+requires-python = ">=3.11"
+dependencies = [
+    "opencv-python==4.14.0.94",
+    "opencv-contrib-python==4.14.0.94",
+    "mediapipe>=0.10.14,<0.11",
+    "numpy>=1.26,<3",
+    "pillow>=10",
+]
+
+[project.optional-dependencies]
+ml = ["torch>=2.2", "torchvision>=0.17"]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[project.scripts]
+airwrite = "airwrite.app:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
