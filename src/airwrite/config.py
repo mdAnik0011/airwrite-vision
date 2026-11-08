@@ -69,10 +69,10 @@ class DrawingConfig:
     eraser_maximum_jump: float = 240.0
     minimum_point_distance: float = 3.0
     maximum_jump: float = 240.0
-    toolbar_height: int = 86
+    toolbar_height: int = 48
     toolbar_top_margin: int = 64
     toolbar_side_margin: int = 48
-    status_height: int = 90
+    status_height: int = 64
     output_dir: Path = Path("outputs/drawings")
 
     def __post_init__(self):

@@ -21,7 +21,7 @@ from airwrite.metrics import RuntimeMetrics
 from airwrite.recognizer import CharacterRecognizer
 from airwrite.smoothing import PointSmoother
 from airwrite.strokes import StrokeManager, StrokePoint
-from airwrite.ui import KEY_ACTIONS, Toolbar, draw_debug
+from airwrite.ui import KEY_ACTIONS, DisplayStatus, Toolbar, draw_debug
 
 LOGGER = logging.getLogger(__name__)
 
@@ -49,14 +49,22 @@ class AirWriteApp:
         self.prediction_revision = -1
         self.text = ""
         self.message = (
-            f"Collecting {collector.label}: SAVE stores sample and clears."
-            if collector
-            else self.recognizer.status
+            f"Collecting {collector.label}: SAVE stores sample and clears." if collector else ""
         )
         self.canvas = None
         self.toolbar = None
         self.last_hand_time = 0.0
         self.previous_raw = None
+
+    @property
+    def message(self) -> str:
+        """Latest action feedback; retained for logging/tests after the toast fades."""
+        return self._message
+
+    @message.setter
+    def message(self, value: str):
+        self._message = value
+        self.message_until = time.monotonic() + 5.0
 
     def _invalidate_prediction(self):
         if self.predictions and self.prediction_revision != self.strokes.revision:
@@ -202,25 +210,39 @@ class AirWriteApp:
         return cursor, event
 
     def _display(self, frame, hand, cursor, event):
+        # Quiet the camera feed slightly so handwriting and controls remain legible.
+        frame = cv2.convertScaleAbs(frame, alpha=0.72)
         ink = self.canvas.render()
         frame[ink > 0] = (235, 250, 250)
         if self.config.debug and hand is not None:
             draw_debug(frame, hand, event)
         fps = self.metrics.tick(hand is not None)
-        prediction = " | ".join(f"{p.character} {p.confidence:.0%}" for p in self.predictions)
-        status = [
-            f"{self.interaction.tool.name} | {self.interaction.state.name} | "
-            f"Hand: {'YES' if hand else 'NO'} | "
-            f"FPS: {fps:.1f} | {self.config.gesture.control_mode.upper()}",
-            f"Prediction: {prediction or '--'}   Text: {self.text[-45:]}",
-            self.message,
-            (
-                f"{self.pose.value} | 2 write / 1 point / fist erase | G pinch mode"
-                if self.config.gesture.control_mode == "fingers"
-                else "PINCH to draw | G finger mode | P/E tools | R recognize | Q quit"
-            ),
-        ]
-        self.toolbar.draw(frame, cursor, self.interaction.tool, status)
+        prediction = (
+            f"{self.predictions[0].character}  {self.predictions[0].confidence:.0%}"
+            if self.predictions
+            else ""
+        )
+        message = self.message if time.monotonic() < self.message_until else ""
+        if message == "Recognition complete.":
+            message = ""
+        if self.collector and not message:
+            message = f"Collecting {self.collector.label} / Save to capture the next sample"
+        status = DisplayStatus(
+            state={
+                InteractionState.NO_HAND: "Show your hand",
+                InteractionState.HOVERING: "Ready",
+                InteractionState.DRAWING: "Writing",
+                InteractionState.ERASING: "Erasing",
+            }[self.interaction.state],
+            hand_present=hand is not None,
+            prediction=prediction,
+            text=self.text,
+            message=message,
+            finger_mode=self.config.gesture.control_mode == "fingers",
+            debug=self.config.debug,
+            fps=fps,
+        )
+        self.toolbar.draw(frame, cursor, status)
         if cursor is not None and self.dwell.progress > 0:
             cv2.ellipse(
                 frame,

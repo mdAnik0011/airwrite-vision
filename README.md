@@ -7,7 +7,7 @@ trajectories into digital handwriting and recognized text.
 
 Write with index and middle fingers raised. Raise only your index finger to
 reposition or select toolbar actions; close your hand into a fist to erase. Recognize
-one letter at a time, then build text using ADD.
+one letter at a time, then press A or Enter to add it to text.
 The desktop application keeps editable vector trajectories separate from the
 camera display and recognition canvas. It runs locally and does not save webcam
 images. Drawing remains available without trained recognition weights.
@@ -23,9 +23,9 @@ test samples**. This does not measure air-writing accuracy. See
 - Explicit hover/draw/erase states; tracking loss splits strokes immediately.
 - Vector segment erasing, multi-stroke drawing, undo (last 100 edits), clear.
 - Gesture-operated toolbar and full keyboard fallbacks.
-- Clean PNG export, top-three letter predictions and character-by-character text.
+- Clean PNG export, letter recognition and character-by-character text.
 - CNN training, validation, held-out evaluation and custom sample collection.
-- Rolling FPS, debug landmarks and anonymous session statistics.
+- Rolling FPS and landmarks in debug mode, plus anonymous session statistics.
 - Camera-free unit and integration tests.
 
 ## Architecture
@@ -101,7 +101,7 @@ in `../.tools/`; use the standard installation above when cloning elsewhere.
 
 Default resolution is 640×480, using actual delivered dimensions for all geometry.
 Capture requests 60 FPS and a small buffer where the camera backend supports it;
-the displayed FPS is measured, not guaranteed. Adaptive smoothing filters small
+the FPS shown in debug mode is measured, not guaranteed. Adaptive smoothing filters small
 movements but follows movements of 24 pixels or more directly to reduce lag.
 The stroke jump cutoff is 240 pixels per observed frame; tracking loss still
 ends the stroke. Fast paths between observed points are connected with lines;
@@ -135,8 +135,10 @@ Finger controls are the default:
 With only your index finger raised, hover over a toolbar button for **0.8 seconds**
 to select it. The ring around the cursor shows progress. Move away or lower the
 finger before selecting the same button again. In optional pinch mode, pinch to
-click a toolbar button. UNDO, CLEAR, SAVE, RECOGNIZE and text actions work this way.
-SAVE writes ink only to `outputs/drawings/`.
+click a toolbar button. The toolbar contains only **Undo, Clear, Read, and Save**.
+Read recognizes the current letter; Save writes ink only to `outputs/drawings/`.
+The compact footer shows the best prediction or current text, with brief feedback
+after actions. Additional controls are available through the keyboard table below.
 
 The toolbar sits inside the camera frame, with 64 pixels of space above it and
 48 pixels at each side at 640×480. This keeps controls reachable without moving
@@ -151,15 +153,16 @@ stroke. Switching to the pointer or another shape stops the current action
 immediately. Joint angles and relative reach support either hand
 and in-plane hand rotation; severe sideways poses/occlusion can still fail.
 
-**G** or the **GESTURES** button toggles between finger controls and the original
-pinch mode. Selecting PEN/ERASER (or P/E) explicitly switches to pinch mode, where
+**G** toggles between finger controls and the original
+pinch mode. Pressing P/E explicitly selects pen/eraser and switches to pinch mode, where
 pinching draws/erases with the chosen tool and release allows repositioning.
 Start directly in this mode with `python -m airwrite.app --control-mode pinch`.
 Use G to return to automatic finger-controlled pen/eraser switching.
 
-RECOGNIZE displays three candidates with softmax scores. ADD commits the top
-candidate and clears the drawing; SPACE, BACKSPACE and CLEAR TEXT edit the text.
-Changing ink invalidates previous predictions so ADD cannot commit a stale result.
+Read (or R) displays the top candidate with its softmax score. A or Enter commits
+that candidate and clears the drawing; Space, Backspace and X edit the text.
+The top three candidates remain in session statistics. Changing ink invalidates
+previous predictions so a stale result cannot be committed.
 Text is session-only; drawing saves and statistics do not persist the text buffer.
 
 ## Keyboard Controls
